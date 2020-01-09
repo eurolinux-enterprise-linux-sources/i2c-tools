@@ -6,12 +6,15 @@
 
 Name:           i2c-tools
 Version:        3.1.0
-Release:        1%{?dist}
+Release:        3%{?dist}
 Summary:        A heterogeneous set of I2C tools for Linux
 Group:          Applications/System
 License:        GPLv2+
 URL:            http://www.lm-sensors.org/wiki/I2CTools
 Source0:        http://dl.lm-sensors.org/i2c-tools/releases/%{name}-%{version}.tar.bz2
+
+# Autoload i2c-dev module when needed
+Patch0:         i2c-tools-3.1.0-load-i2c-dev-mod.patch
 # for /etc/udev/makedev.d resp /etc/modprobe.d ownership
 Requires:       udev module-init-tools
 ExcludeArch:    s390 s390x
@@ -37,6 +40,8 @@ what you are doing.
 
 %prep
 %setup -q 
+
+%patch0 -p1
 
 
 %build
@@ -87,6 +92,10 @@ rm -rf $RPM_BUILD_ROOT
 
 
 %changelog
+* Tue Jun 03 2014 Michal Minar <miminar@redhat.com> 3.1.0-3
+- Made sure i2c-dev module is loaded.
+- Resolves #914728
+
 * Thu Mar 22 2012 Nikola Pajkovsky <npajkovs@redhat.com> - 3.1.0-1
 - i2c-tools 3.1.0
 

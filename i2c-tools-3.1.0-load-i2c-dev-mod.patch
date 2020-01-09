@@ -1,0 +1,122 @@
+Index: i2c-tools-3.1.0/tools/i2cbusses.c
+===================================================================
+--- i2c-tools-3.1.0.orig/tools/i2cbusses.c
++++ i2c-tools-3.1.0/tools/i2cbusses.c
+@@ -37,9 +37,15 @@
+ #include <dirent.h>
+ #include <fcntl.h>
+ #include <errno.h>
++#ifdef USE_LIBKMOD
++	#include <libkmod.h>
++#endif
+ #include "i2cbusses.h"
+ #include <linux/i2c-dev.h>
+ 
++#define BUFLEN 512
++#define I2C_DEV_MOD_NAME "i2c_dev"
++
+ enum adt { adt_dummy, adt_isa, adt_i2c, adt_smbus, adt_unknown };
+ 
+ struct adap_type {
+@@ -60,6 +66,70 @@ static struct adap_type adap_types[5] =
+ 	  .algo		= "N/A", },
+ };
+ 
++/**
++ * Try to load i2c_dev kernel mode. Do nothing, if module is already loaded.
++ * Returns 1 on success, 0 otherwise.
++ */
++static int try_load_i2c_dev_mod(void) {
++	int err = 0, loaded = 0;
++	char errbuf[BUFLEN] = { 0 };
++#ifdef USE_LIBKMOD
++	int flags = 0;
++	struct kmod_ctx *ctx;
++	struct kmod_list *l, *list = NULL;
++
++	ctx = kmod_new(NULL, NULL);
++	if (!ctx) {
++		snprintf(errbuf, BUFLEN, "kmod_new() failed!");
++		goto done;
++	}
++	if (kmod_module_new_from_lookup(ctx, I2C_DEV_MOD_NAME, &list) < 0 || list == NULL) {
++		snprintf(errbuf, BUFLEN, I2C_DEV_MOD_NAME " module lookup failed");
++		goto ctx_unref;
++	}
++
++	flags |= KMOD_PROBE_APPLY_BLACKLIST_ALIAS_ONLY;
++	kmod_list_foreach(l, list) {
++		struct kmod_module *mod = kmod_module_get_module(l);
++		err = kmod_module_probe_insert_module(mod, flags, NULL, NULL, NULL, NULL);
++		if (err == -ENOENT) {
++			snprintf(errbuf, BUFLEN,
++					"unknown symbol in module \"%s\", or unknown parameter (see dmesg)",
++					kmod_module_get_name(mod));
++		} else if (err < 0) {
++			snprintf(errbuf, BUFLEN, "(module %s): %s",
++					kmod_module_get_name(mod), strerror(-err));
++		} else {
++			kmod_module_unref(mod);
++			++loaded;
++			break;
++		}
++		kmod_module_unref(mod);
++	}
++
++list_unref:
++	kmod_module_unref_list(list);
++ctx_unref:
++	kmod_unref(ctx);
++#else
++	err = system("modprobe " I2C_DEV_MOD_NAME);
++	if (err < 0) {
++		snprintf(errbuf, BUFLEN, "failed to execute modprobe command");
++	} else if (err > 0) {
++		snprintf(errbuf, BUFLEN, "modprobe command exited with code %d",
++				WEXITSTATUS(err));
++	} else {
++		++loaded;
++		goto done;
++	}
++#endif
++	if (errbuf[0])
++		fprintf(stderr, "Failed to load required " I2C_DEV_MOD_NAME
++			   	" kernel module: %s\n", errbuf);
++done:
++	return loaded;
++}
++
+ static enum adt i2c_get_funcs(int i2cbus)
+ {
+ 	unsigned long funcs;
+@@ -206,8 +276,12 @@ struct i2c_adap *gather_i2c_busses(void)
+ 	   i2c-dev and what we really care about are the i2c-dev numbers.
+ 	   Unfortunately the names are harder to get in i2c-dev */
+ 	strcat(sysfs, "/class/i2c-dev");
+-	if(!(dir = opendir(sysfs)))
+-		goto done;
++	if(!(dir = opendir(sysfs))) {
++		if (!try_load_i2c_dev_mod())
++			goto done;
++		if ((!(dir = opendir(sysfs))))
++			goto done;
++	}
+ 	/* go through the busses */
+ 	while ((de = readdir(dir)) != NULL) {
+ 		if (!strcmp(de->d_name, "."))
+Index: i2c-tools-3.1.0/tools/Module.mk
+===================================================================
+--- i2c-tools-3.1.0.orig/tools/Module.mk
++++ i2c-tools-3.1.0/tools/Module.mk
+@@ -15,6 +15,11 @@ TOOLS_CFLAGS	:= -Wstrict-prototypes -Wsh
+ 
+ TOOLS_TARGETS	:= i2cdetect i2cdump i2cset i2cget
+ 
++ifeq ($(shell pkg-config --exists libkmod && echo 1), 1)
++    TOOLS_CFLAGS  += $(shell pkg-config --cflags libkmod) -DUSE_LIBKMOD
++    LDFLAGS += $(shell pkg-config --libs libkmod)
++endif
++
+ #
+ # Programs
+ #
