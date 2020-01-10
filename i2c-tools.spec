@@ -4,9 +4,11 @@
 # This file and all modifications and additions to the pristine
 # package are under the same license as the package itself.
 
+%global _i2c_tools_libdir /usr/lib
+
 Name:           i2c-tools
 Version:        3.1.0
-Release:        10%{?dist}
+Release:        13%{?dist}
 Summary:        A heterogeneous set of I2C tools for Linux
 Group:          Applications/System
 License:        GPLv2+
@@ -18,6 +20,8 @@ Source0:        http://dl.lm-sensors.org/i2c-tools/releases/%{name}-%{version}.t
 Patch0:         i2c-tools-3.1-man-eeproX.patch
 # Introducing man pages for decode-* binaries
 Patch1:         i2c-tools-3.1-man-decodeX.patch
+# Load i2c-dev module when i2cdetect is executed (bug #1071397)
+Patch2:         i2c-tools-3.1.0-load-i2cdev.patch
 
 # for /etc/udev/makedev.d resp /etc/modprobe.d ownership
 Requires:       udev module-init-tools
@@ -53,6 +57,7 @@ Group:          Applications/System
 
 %patch0 -p1
 %patch1 -p1
+%patch2 -p1 -b .load-i2cdev
 
 %build
 make CFLAGS="$RPM_OPT_FLAGS"
@@ -84,9 +89,9 @@ rm -rf $RPM_BUILD_ROOT%{_includedir}/linux
 # and edid-decode is a more complete tool than decode-edid.
 rm -f $RPM_BUILD_ROOT%{_bindir}/{ddcmon,decode-edid}
 # for i2c-dev ondemand loading through kmod
-mkdir -p $RPM_BUILD_ROOT%{_sysconfdir}/modprobe.d 
+mkdir -p $RPM_BUILD_ROOT%{_i2c_tools_libdir}/modprobe.d 
 echo "alias char-major-89-* i2c-dev" > \
-  $RPM_BUILD_ROOT%{_sysconfdir}/modprobe.d/i2c-dev.conf
+  $RPM_BUILD_ROOT%{_i2c_tools_libdir}/modprobe.d/i2c-dev.conf
 # for /dev/i2c-# creation (which are needed for kmod i2c-dev autoloading)
 mkdir -p $RPM_BUILD_ROOT%{_sysconfdir}/udev/makedev.d
 for (( i = 0 ; i < 8 ; i++ )) do
@@ -96,7 +101,7 @@ done
 
 %files
 %doc CHANGES COPYING README
-%config(noreplace) %{_sysconfdir}/modprobe.d/i2c-dev.conf
+%config(noreplace) %{_i2c_tools_libdir}/modprobe.d/i2c-dev.conf
 %config(noreplace) %{_sysconfdir}/udev/makedev.d/99-i2c-dev.nodes
 %{_bindir}/*
 %{_sbindir}/*
@@ -119,6 +124,16 @@ done
 
 
 %changelog
+* Wed Apr 05 2017 Zdenek Dohnal <zdohnal@redhat.com> - 3.1.0-13
+- added #ifndef for freeing dev_path in try_load_i2c_dev_mod function (rhbz#1071397)
+
+* Wed Mar 29 2017 Zdenek Dohnal <zdohnal@redhat.com> - 3.1.0-12
+- fixing covscan errors for rhbz#1071397
+
+* Wed Mar 29 2017 Zdenek Dohnal <zdohnal@redhat.com> - 3.1.0-11
+- 1071397 - Load i2c-dev module when i2cdetect is executed
+- 1195285 - Ship modprobe.d files in /usr/lib/modprobe.d  
+
 * Fri Dec 27 2013 Daniel Mach <dmach@redhat.com> - 3.1.0-10
 - Mass rebuild 2013-12-27
 
