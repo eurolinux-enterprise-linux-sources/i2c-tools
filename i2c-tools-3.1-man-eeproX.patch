@@ -1,0 +1,261 @@
+diff -Naur i2c-tools-3.1.0.orig/eepromer/eeprog.8 i2c-tools-3.1.0/eepromer/eeprog.8
+--- i2c-tools-3.1.0.orig/eepromer/eeprog.8	1970-01-01 01:00:00.000000000 +0100
++++ i2c-tools-3.1.0/eepromer/eeprog.8	2013-07-03 17:10:46.193787836 +0200
+@@ -0,0 +1,105 @@
++.\"
++.\"  eeprog.8 - manpage for the i2c-tools/eeprog utility
++.\"  Copyright (C) 2013  Jaromir Capik
++.\"
++.\"  This program is free software; you can redistribute it and/or modify
++.\"  it under the terms of the GNU General Public License as published by
++.\"  the Free Software Foundation; either version 2 of the License, or
++.\"  (at your option) any later version.
++.\"
++.\"  This program is distributed in the hope that it will be useful,
++.\"  but WITHOUT ANY WARRANTY; without even the implied warranty of
++.\"  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++.\"  GNU General Public License for more details.
++.\"
++.\"  You should have received a copy of the GNU General Public License along
++.\"  with this program; if not, write to the Free Software Foundation, Inc.,
++.\"  51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
++.\"
++.TH eeprog "8" "Jul 2013" "i2c-tools" "System Administration"
++.SH NAME
++eeprog \- reads and writes 24Cxx EEPROMs connected to I2C serial bus.
++.SH SYNOPSIS
++.B eeprog
++[-fqxdh] [-16|-8] [-r addr[:count]|-w addr] <device> <i2c-addr>
++.SH DESCRIPTION
++.B eeprog
++uses the SMBus protocol used by most of the recent chipsets.
++.SH NOTE
++Don't forget to load your i2c chipset and the i2c-dev drivers.
++.P
++The following environment variables could be set instead of the command line arguments:
++.P
++    EEPROG_DEV              device
++.br
++    EEPROG_I2C_ADDR         i2c-addr
++.SH PARAMETERS
++.I Address modes
++.TP
++.B \-8
++Use 8bit address mode for 24c0x...24C16 [default]
++.TP
++.B \-16
++Use 16bit address mode for 24c32...24C256
++.TP
++.I Actions
++.TP
++.B \-r addr[:count]
++Read
++.B count
++(1 if omitted) bytes from
++.B addr
++and print them to the standard output
++.TP
++.B \-w addr
++Write input (stdin) at address
++.B addr
++of the EEPROM
++.TP
++.B \-h
++Print this help
++.TP
++.I Options
++.TP
++.B \-x
++Set hex output mode
++.TP
++.B \-d
++Dummy mode, display what *would* have been done
++.TP
++.B \-f
++Disable warnings and don't ask confirmation
++.TP
++.B \-q
++Quiet mode
++.TP
++.I Bus
++.TP
++.B device
++Device file representing the I2C bus (eg. /dev/i2c-0)
++.TP
++.B i2c-addr
++I2C bus address of the EEPROM (eg. 0x3A)
++.SH EXAMPLES
++Read 64 bytes from the EEPROM at address 0x54 on bus 0 starting at address 123 (decimal)
++.P
++.B 	eeprog
++/dev/i2c-0 0x54 -r 123:64
++.P
++Print the hex codes of the first 32 bytes read from bus 1 at address 0x22
++.P
++.B 	eeprog
++/dev/i2c-1 0x51 -x -r 0x22:0x20
++.P
++Write the current timestamp at address 0x200 of the EEPROM on bus 0 at address 0x33
++.P
++ 	date |
++.B eeprog
++/dev/i2c-0 0x33 -w 0x200
++.SH SEE ALSO
++.BR eeprom (8)
++.BR eepromer (8)
++.SH AUTHOR
++.UR stefano@codesink.org
++Stefano Barbato
++.UE
+diff -Naur i2c-tools-3.1.0.orig/eepromer/eepromer.8 i2c-tools-3.1.0/eepromer/eepromer.8
+--- i2c-tools-3.1.0.orig/eepromer/eepromer.8	1970-01-01 01:00:00.000000000 +0100
++++ i2c-tools-3.1.0/eepromer/eepromer.8	2013-07-03 17:25:35.067487324 +0200
+@@ -0,0 +1,63 @@
++.\"
++.\"  eeprom.8 - manpage for the i2c-tools/eeprom utility
++.\"  Copyright (C) 2013  Jaromir Capik
++.\"
++.\"  This program is free software; you can redistribute it and/or modify
++.\"  it under the terms of the GNU General Public License as published by
++.\"  the Free Software Foundation; either version 2 of the License, or
++.\"  (at your option) any later version.
++.\"
++.\"  This program is distributed in the hope that it will be useful,
++.\"  but WITHOUT ANY WARRANTY; without even the implied warranty of
++.\"  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++.\"  GNU General Public License for more details.
++.\"
++.\"  You should have received a copy of the GNU General Public License along
++.\"  with this program; if not, write to the Free Software Foundation, Inc.,
++.\"  51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
++.\"
++.TH eepromer "8" "Jul 2013" "i2c-tools" "System Administration"
++.SH NAME
++eepromer \- reads and writes 24Cxx EEPROMs connected to I2C serial bus.
++.SH SYNOPSIS
++.B eepromer
++[-r|-w|-e|-p] -f <device> <i2c-addr>
++.SH DESCRIPTION
++The EEPROM must be a large EEPROM which uses a 2-byte address
++field (24C32 or larger). It will NOT WORK on small EEPROMs
++(24C01 - 24C16) such as those used on SDRAM DIMMs.
++.SH NOTE
++Don't forget to load your i2c chipset and the i2c-dev drivers.
++.P
++Tested only on 24C256.
++.P
++.SH PARAMETERS
++.TP
++.I Actions
++.TP
++.B \-r
++Read
++.TP
++.B \-w
++Write
++.TP
++.B \-e
++Erase
++.TP
++.B \-p
++Print header
++.TP
++.I Bus
++.TP
++.B \-f device
++Device file representing the I2C bus (eg. /dev/i2c-0)
++.TP
++.B i2c-addr
++I2C bus address of the EEPROM (eg. 0x3A)
++.SH SEE ALSO
++.BR eeprog (8)
++.BR eeprom (8)
++.SH AUTHOR
++.UR marvin@sitour.cz
++Daniel Smolik
++.UE
+diff -Naur i2c-tools-3.1.0.orig/eepromer/eeprom.8 i2c-tools-3.1.0/eepromer/eeprom.8
+--- i2c-tools-3.1.0.orig/eepromer/eeprom.8	1970-01-01 01:00:00.000000000 +0100
++++ i2c-tools-3.1.0/eepromer/eeprom.8	2013-07-03 17:14:22.852383941 +0200
+@@ -0,0 +1,64 @@
++.\"
++.\"  eeprom.8 - manpage for the i2c-tools/eeprom utility
++.\"  Copyright (C) 2013  Jaromir Capik
++.\"
++.\"  This program is free software; you can redistribute it and/or modify
++.\"  it under the terms of the GNU General Public License as published by
++.\"  the Free Software Foundation; either version 2 of the License, or
++.\"  (at your option) any later version.
++.\"
++.\"  This program is distributed in the hope that it will be useful,
++.\"  but WITHOUT ANY WARRANTY; without even the implied warranty of
++.\"  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++.\"  GNU General Public License for more details.
++.\"
++.\"  You should have received a copy of the GNU General Public License along
++.\"  with this program; if not, write to the Free Software Foundation, Inc.,
++.\"  51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
++.\"
++.TH eeprom "8" "Jul 2013" "i2c-tools" "System Administration"
++.SH NAME
++eeprom \- reads and writes 24Cxx EEPROMs connected to I2C serial bus.
++.SH SYNOPSIS
++.B eeprom
++[-d dev] [-a adr] [-p pgs] [-w] [-y] [-f file]
++.SH DESCRIPTION
++.B eeprom
++can be used for reading from / writing to i2c-eeproms like the popular
++24C16, 24C08, 24C04, etc.
++In contrast to eeprommer which supports 24C256-type eeproms (24C16s)
++this tool works with 1-byte addresses!
++.SH NOTE
++Don't forget to load your i2c chipset and the i2c-dev drivers.
++.P
++Pages/addresses:
++    eeproms with more than 256 bytes appear as if they
++    were several eeproms with consecutive addresses on the bus
++    so we might as well address several separate eeproms with
++    increasing addresses
++.SH PARAMETERS
++.TP
++.B dev
++device, e.g. /dev/i2c-0    (def)
++.TP
++.B adr
++base address of eeprom, eg 0xA0 (def)
++.TP
++.B pgs
++number of pages to read, eg 8 (def)
++.TP
++.B \-w
++write to eeprom (default is reading!)
++.TP
++.B \-y
++suppress warning when writing (default is to warn!)
++.TP
++.B \-f file
++copy eeprom contents to/from file (default for read is test only; for write is all zeros)
++.SH SEE ALSO
++.BR eeprog (8)
++.BR eepromer (8)
++.SH AUTHOR
++.UR chris@hedonism.cx
++Christian Vogel
++.UE
+diff -Naur i2c-tools-3.1.0.orig/tools/i2cset.c i2c-tools-3.1.0/tools/i2cset.c
+--- i2c-tools-3.1.0.orig/tools/i2cset.c	2011-02-15 17:12:27.000000000 +0100
++++ i2c-tools-3.1.0/tools/i2cset.c	2013-06-19 12:45:55.852490195 +0200
+@@ -35,7 +35,12 @@
+ static void help(void)
+ {
+ 	fprintf(stderr,
+-		"Usage: i2cset [-f] [-y] [-m MASK] I2CBUS CHIP-ADDRESS DATA-ADDRESS [VALUE] ... [MODE]\n"
++		"Usage: i2cset [OPTIONS] I2CBUS CHIP-ADDRESS DATA-ADDRESS [VALUE] ... [MODE]\n"
++		"  OPTIONS are\n"
++		"    -f (force access when busy)\n"
++		"    -y (disable interactive mode)\n"
++		"    -m MASK (value write mask - bits set to 0 are preserved if possible)\n"
++		"    -r (write verification by reading back)\n"
+ 		"  I2CBUS is an integer or an I2C bus name\n"
+ 		"  ADDRESS is an integer (0x03 - 0x77)\n"
+ 		"  MODE is one of:\n"
